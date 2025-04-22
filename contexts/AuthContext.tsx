@@ -1,35 +1,47 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
-const TOKEN_KEY = 'auth_token';
+type AuthContextType = {
+  token: string | null;
+  login: (token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  isLoading: boolean;
+};
 
-const AuthContext = createContext(null);
+const AuthContext = createContext<AuthContextType>({
+  token: null,
+  login: async () => {},
+  logout: async () => {},
+  isLoading: true,
+});
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const login = async (newToken) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, newToken);
-    setToken(newToken);
-  };
-
-  const logout = async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    setToken(null);
-  };
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadToken = async () => {
-      const stored = await SecureStore.getItemAsync(TOKEN_KEY);
-      setToken(stored);
-      setLoading(false);
+      const storedToken = await SecureStore.getItemAsync('token');
+      if (storedToken) {
+        setToken(storedToken);
+      }
+      setIsLoading(false);
     };
     loadToken();
   }, []);
 
+  const login = async (newToken: string) => {
+    await SecureStore.setItemAsync('token', newToken);
+    setToken(newToken);
+  };
+
+  const logout = async () => {
+    await SecureStore.deleteItemAsync('token');
+    setToken(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ token, login, logout, loading }}>
+    <AuthContext.Provider value={{ token, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
   View,
+  Text,
   TextInput,
   Button,
   StyleSheet,
   Alert,
-  Text,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function CreateNote() {
   const [title, setTitle] = useState('');
@@ -27,7 +27,8 @@ export default function CreateNote() {
       });
       const data = await res.json();
       setCategories(data);
-    } catch {
+    } catch (err) {
+      console.error('Erreur chargement catégories', err);
       Alert.alert('Erreur', 'Impossible de charger les catégories');
     }
   };
@@ -44,6 +45,7 @@ export default function CreateNote() {
       return;
     }
 
+    const payload = { title, content, category_ids: selected };
     try {
       const res = await fetch('https://keep.kevindupas.com/api/notes', {
         method: 'POST',
@@ -51,15 +53,15 @@ export default function CreateNote() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, content, category_ids: selected }),
+        body: JSON.stringify(payload),
       });
 
+      const json = await res.json();
       if (res.ok) {
-        Alert.alert('Note créée');
+        Alert.alert('Succès', 'Note enregistrée');
         router.replace('/');
       } else {
-        const err = await res.json();
-        Alert.alert('Erreur', err.message || 'Erreur API');
+        Alert.alert('Erreur', json.message || 'Erreur lors de la création');
       }
     } catch (err) {
       Alert.alert('Erreur', 'Connexion impossible');
@@ -71,10 +73,12 @@ export default function CreateNote() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="black" />
+        <Text style={styles.backText}>⬅️ Retour</Text>
       </TouchableOpacity>
+
+      <Text style={styles.title}>Nouvelle note</Text>
 
       <TextInput
         placeholder="Titre"
@@ -86,7 +90,7 @@ export default function CreateNote() {
         placeholder="Contenu"
         value={content}
         onChangeText={setContent}
-        style={[styles.input, { height: 120 }]}
+        style={[styles.input, styles.contentInput]}
         multiline
       />
 
@@ -110,36 +114,70 @@ export default function CreateNote() {
         ))}
       </View>
 
-      <Button title="Enregistrer la note" onPress={handleSave} />
-    </View>
+      <View style={styles.button}>
+        <Button title="Enregistrer la note" onPress={handleSave} color="#2196F3" />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  backButton: { marginBottom: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#aaa',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+  container: {
+    padding: 20,
+    backgroundColor: '#f4f5f7',
+    flexGrow: 1,
+    alignItems: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#2196F3',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 12,
+    fontWeight: '600',
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  contentInput: {
+    height: 120,
+    textAlignVertical: 'top',
   },
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 20,
+    alignSelf: 'flex-start',
   },
   tag: {
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  button: {
+    marginTop: 16,
+    width: '100%',
+    maxWidth: 400,
   },
 });

@@ -4,17 +4,17 @@ import { View, Text } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 function ProtectedLayout() {
-  const { token, loading } = useAuth();
+  const { token, isLoading } = useAuth(); // ✅ CORRECTION ICI
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !token) {
+    if (!isLoading && !token) {
       console.log('🔒 Redirection vers /auth/login');
       router.replace('/auth/login');
     }
-  }, [loading, token]);
+  }, [isLoading, token]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Chargement...</Text>

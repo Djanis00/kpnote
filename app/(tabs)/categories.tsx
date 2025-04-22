@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -32,21 +33,33 @@ export default function CategoriesScreen() {
   };
 
   const addCategory = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      Alert.alert('Erreur', 'Le nom est requis');
+      return;
+    }
+
+    const payload = { name, color };
     try {
-      await fetch('https://keep.kevindupas.com/api/categories', {
+      const res = await fetch('https://keep.kevindupas.com/api/categories', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, color }),
+        body: JSON.stringify(payload),
       });
-      setName('');
-      setColor('#FF5733');
-      fetchCategories();
-    } catch {
-      Alert.alert('Erreur', 'Impossible d’ajouter la catégorie');
+
+      const responseJson = await res.json();
+      if (res.ok) {
+        setName('');
+        setColor('#FF5733');
+        fetchCategories();
+        Alert.alert('Succès', 'Catégorie ajoutée');
+      } else {
+        Alert.alert('Erreur', responseJson.message || 'Erreur serveur');
+      }
+    } catch (err) {
+      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
     }
   };
 
@@ -67,21 +80,23 @@ export default function CategoriesScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Ajouter une catégorie</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Nouvelle catégorie</Text>
+
       <TextInput
-        placeholder="Nom"
+        placeholder="Nom de la catégorie"
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
       <TextInput
-        placeholder="Couleur personnalisée (#hex)"
+        placeholder="Couleur (#hex)"
         value={color}
         onChangeText={setColor}
         style={styles.input}
       />
-      <Text style={{ marginTop: 8 }}>Ou choisir une couleur :</Text>
+
+      <Text style={styles.label}>Couleurs prédéfinies :</Text>
       <View style={styles.palette}>
         {predefinedColors.map((c) => (
           <TouchableOpacity
@@ -91,7 +106,7 @@ export default function CategoriesScreen() {
               {
                 backgroundColor: c,
                 borderWidth: c === color ? 3 : 1,
-                borderColor: c === color ? '#000' : '#999',
+                borderColor: c === color ? '#000' : '#ccc',
               },
             ]}
             onPress={() => setColor(c)}
@@ -99,82 +114,101 @@ export default function CategoriesScreen() {
         ))}
       </View>
 
-      <View style={styles.colorPreviewContainer}>
-        <Text>Aperçu :</Text>
-        <View style={[styles.colorDot, { backgroundColor: color || '#ccc' }]} />
+      <View style={styles.colorRow}>
+        <Text style={styles.label}>Aperçu :</Text>
+        <View style={[styles.colorDot, { backgroundColor: color }]} />
       </View>
 
-      <Button title="Ajouter" onPress={addCategory} />
+      <View style={styles.button}>
+        <Button title="Ajouter la catégorie" onPress={addCategory} color="#2196F3" />
+      </View>
 
       <Text style={styles.title}>Catégories existantes</Text>
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View
-              style={[styles.colorDot, { backgroundColor: item.color || '#eee' }]}
-            />
-            <Text style={styles.catName}>{item.name}</Text>
-            <Button
-              title="Supprimer"
-              color="red"
-              onPress={() => deleteCategory(item.id)}
-            />
-          </View>
-        )}
-      />
-    </View>
+
+      {categories.map((item) => (
+        <View key={item.id} style={styles.item}>
+          <View style={[styles.colorDot, { backgroundColor: item.color || '#eee' }]} />
+          <Text style={styles.catName}>{item.name}</Text>
+          <Button title="Supprimer" color="crimson" onPress={() => deleteCategory(item.id)} />
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, flex: 1 },
-  title: { fontSize: 18, fontWeight: 'bold', marginTop: 24 },
+  container: {
+    padding: 20,
+    paddingBottom: 60,
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   input: {
+    width: '100%',
+    maxWidth: 400,
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    borderRadius: 8,
-    marginVertical: 8,
-  },
-  colorPreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    borderRadius: 10,
+    backgroundColor: '#fff',
     marginBottom: 12,
   },
-  colorDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#999',
-    marginLeft: 6,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginVertical: 6,
-    gap: 8,
-  },
-  catName: {
-    flex: 1,
-    fontSize: 16,
+  label: {
+    alignSelf: 'flex-start',
+    fontWeight: '500',
+    marginBottom: 8,
   },
   palette: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginVertical: 10,
+    marginBottom: 16,
+    justifyContent: 'center',
   },
   colorPreview: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  colorDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#999',
+  },
+  colorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  button: {
+    width: '100%',
+    maxWidth: 400,
+    marginBottom: 24,
+  },
+  item: {
+    width: '100%',
+    maxWidth: 400,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 10,
+  },
+  catName: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 10,
   },
 });

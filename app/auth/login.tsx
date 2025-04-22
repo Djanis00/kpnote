@@ -1,86 +1,115 @@
 import { useState } from 'react';
 import {
   View,
+  Text,
   TextInput,
   Button,
   StyleSheet,
   Alert,
-  Text,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const router = useRouter();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer un email et un mot de passe.');
+    if (!email || !password) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
       return;
     }
 
     try {
-      console.log('🟢 handleLogin appelé');
       const res = await fetch('https://keep.kevindupas.com/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password }),
       });
 
       const result = await res.json();
-      console.log('📦 Résultat API :', result);
-      console.log('✅ Statut :', res.status);
 
       if (res.ok && result.access_token) {
         await login(result.access_token);
-        console.log('🔐 Token reçu ? ', !!result.access_token);
-
-        setTimeout(() => {
-          router.replace('/'); // ✅ redirection vers app/index.tsx
-        }, 100);
+        router.replace('/');
       } else {
         Alert.alert('Erreur', result.message || 'Connexion échouée');
       }
     } catch (err) {
-      console.error('Erreur réseau :', err);
-      Alert.alert('Erreur', 'Impossible de se connecter.');
+      Alert.alert('Erreur', 'Impossible de se connecter');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Mot de passe"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
-      <Button title="Se connecter" onPress={handleLogin} />
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.container}
+    >
+      <View style={styles.box}>
+        <Text style={styles.title}>Connexion</Text>
+
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+
+        <TextInput
+          placeholder="Mot de passe"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          style={styles.input}
+        />
+
+        <View style={styles.button}>
+          <Button title="Se connecter" onPress={handleLogin} color="#2196F3" />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f2f5',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  box: {
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ddd',
+    borderRadius: 10,
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+  },
+  button: {
+    marginTop: 12,
   },
 });
