@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ export default function CreateNote() {
   const [content, setContent] = useState('');
   const [categories, setCategories] = useState([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -28,7 +30,7 @@ export default function CreateNote() {
       const data = await res.json();
       setCategories(data);
     } catch (err) {
-      console.error('Erreur chargement catégories', err);
+      console.error('❌ Erreur de chargement des catégories :', err);
       Alert.alert('Erreur', 'Impossible de charger les catégories');
     }
   };
@@ -46,7 +48,10 @@ export default function CreateNote() {
     }
 
     const payload = { title, content, category_ids: selected };
+    console.log('📤 Envoi POST /notes avec :', payload);
+
     try {
+      setLoading(true);
       const res = await fetch('https://keep.kevindupas.com/api/notes', {
         method: 'POST',
         headers: {
@@ -57,14 +62,19 @@ export default function CreateNote() {
       });
 
       const json = await res.json();
+      console.log('📥 Réponse API:', json);
+
       if (res.ok) {
         Alert.alert('Succès', 'Note enregistrée');
         router.replace('/');
       } else {
-        Alert.alert('Erreur', json.message || 'Erreur lors de la création');
+        Alert.alert('Erreur', json.message || 'Erreur de création');
       }
     } catch (err) {
-      Alert.alert('Erreur', 'Connexion impossible');
+      console.error('❌ Erreur réseau :', err);
+      Alert.alert('Erreur', 'Impossible de se connecter');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,7 +125,11 @@ export default function CreateNote() {
       </View>
 
       <View style={styles.button}>
-        <Button title="Enregistrer la note" onPress={handleSave} color="#2196F3" />
+        {loading ? (
+          <ActivityIndicator size="large" color="#2196F3" />
+        ) : (
+          <Button title="Enregistrer la note" onPress={handleSave} color="#2196F3" />
+        )}
       </View>
     </ScrollView>
   );

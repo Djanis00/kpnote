@@ -8,18 +8,20 @@ import {
   Alert,
   Text,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function EditNote() {
   const { id } = useLocalSearchParams();
   const { token } = useAuth();
   const router = useRouter();
 
-  const [note, setNote] = useState({ title: '', content: '', categories: [] });
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [allCategories, setAllCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchNote = async () => {
@@ -28,8 +30,10 @@ export default function EditNote() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setNote(data);
-    } catch {
+      setTitle(data.title);
+      setContent(data.content);
+      setSelectedCategories(data.categories?.map((c) => c.id) || []);
+    } catch (err) {
       Alert.alert('Erreur', 'Impossible de charger la note');
     }
   };
@@ -46,6 +50,14 @@ export default function EditNote() {
     }
   };
 
+  const toggleCategory = (catId: number) => {
+    setSelectedCategories((prev) =>
+      prev.includes(catId)
+        ? prev.filter((id) => id !== catId)
+        : [...prev, catId]
+    );
+  };
+
   const handleSave = async () => {
     try {
       const res = await fetch(`https://keep.kevindupas.com/api/notes/${id}`, {
@@ -55,74 +67,85 @@ export default function EditNote() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: note.title,
-          content: note.content,
-          category_ids: note.categories.map((c) => c.id),
+          title,
+          content,
+          category_ids: selectedCategories,
         }),
       });
 
       if (res.ok) {
-        Alert.alert('Note mise à jour');
+        Alert.alert('Succès', 'Note mise à jour');
         router.replace('/');
       } else {
-        Alert.alert('Erreur', 'Échec de la mise à jour');
+        const err = await res.json();
+        Alert.alert('Erreur', err.message || 'Échec de la mise à jour');
       }
     } catch {
-      Alert.alert('Erreur', 'Connexion impossible');
+      Alert.alert('Erreur', 'Impossible de mettre à jour');
     }
   };
 
   const handleDelete = async () => {
-    Alert.alert('Supprimer ?', 'Cette action est irréversible', [
-      { text: 'Annuler' },
+    Alert.alert('Confirmation', 'Supprimer cette note ?', [
+      {
+        text: 'Annuler',
+        style: 'cancel',
+      },
       {
         text: 'Supprimer',
         style: 'destructive',
         onPress: async () => {
-          await fetch(`https://keep.kevindupas.com/api/notes/${id}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          router.replace('/');
+          try {
+            const res = await fetch(`https://keep.kevindupas.com/api/notes/${id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              router.replace('/');
+            } else {
+              Alert.alert('Erreur', 'Suppression échouée');
+            }
+          } catch {
+            Alert.alert('Erreur', 'Erreur réseau');
+          }
         },
       },
     ]);
   };
 
-  const toggleCategory = (cat) => {
-    const exists = note.categories.some((c) => c.id === cat.id);
-    const updated = exists
-      ? note.categories.filter((c) => c.id !== cat.id)
-      : [...note.categories, cat];
-    setNote({ ...note, categories: updated });
-  };
-
   useEffect(() => {
-    Promise.all([fetchNote(), fetchCategories()]).then(() =>
-      setLoading(false)
-    );
+    fetchNote();
+    fetchCategories().finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 16 }}>
-        <Ionicons name="arrow-back" size={24} color="black" />
+    <ScrollView contentContainerStyle={styles.container}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backText}>⬅️ Retour</Text>
       </TouchableOpacity>
 
+      <Text style={styles.title}>Modifier la note</Text>
+
       <TextInput
-        value={note.title}
-        onChangeText={(text) => setNote({ ...note, title: text })}
         placeholder="Titre"
+        value={title}
+        onChangeText={setTitle}
         style={styles.input}
       />
       <TextInput
-        value={note.content}
-        onChangeText={(text) => setNote({ ...note, content: text })}
         placeholder="Contenu"
-        style={[styles.input, { height: 120 }]}
+        value={content}
+        onChangeText={setContent}
         multiline
+        style={[styles.input, styles.contentInput]}
       />
 
       <Text style={styles.sectionTitle}>Catégories</Text>
@@ -130,11 +153,11 @@ export default function EditNote() {
         {allCategories.map((cat) => (
           <TouchableOpacity
             key={cat.id}
-            onPress={() => toggleCategory(cat)}
+            onPress={() => toggleCategory(cat.id)}
             style={[
               styles.tag,
               {
-                backgroundColor: note.categories.some((c) => c.id === cat.id)
+                backgroundColor: selectedCategories.includes(cat.id)
                   ? cat.color
                   : '#eee',
               },
@@ -145,36 +168,70 @@ export default function EditNote() {
         ))}
       </View>
 
-      <Button title="Enregistrer les modifications" onPress={handleSave} />
-      <Button title="Supprimer la note" onPress={handleDelete} color="red" />
-    </View>
+      <Button title="Mettre à jour" onPress={handleSave} color="#4CAF50" />
+      <View style={{ height: 10 }} />
+      <Button title="Supprimer" onPress={handleDelete} color="crimson" />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+  container: {
+    padding: 20,
+    backgroundColor: '#f4f5f7',
+    flexGrow: 1,
+    alignItems: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#2196F3',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 12,
+    fontWeight: '600',
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  contentInput: {
+    height: 120,
+    textAlignVertical: 'top',
   },
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 20,
+    alignSelf: 'flex-start',
   },
   tag: {
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
 });

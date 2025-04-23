@@ -1,38 +1,49 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function NoteList({ notes, onSelect }) {
-  if (!notes.length) return <Text>Aucune note à afficher</Text>;
-
   return (
-    <FlatList
-      data={notes}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
+    <View style={styles.grid}>
+      {notes.map((note) => (
         <TouchableOpacity
-          onPress={() => onSelect(item)}
-          style={styles.card}
+          key={note.id}
+          style={[styles.card, { backgroundColor: '#fff' }]}
+          onPress={() => onSelect(note)}
         >
-          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.title}>{note.title}</Text>
           <Text style={styles.content} numberOfLines={4}>
-            {item.content}
+            {note.content}
           </Text>
+
+          <View style={styles.categories}>
+            {note.categories?.map((cat) => (
+              <View
+                key={cat.id}
+                style={[styles.catDot, { backgroundColor: cat.color || '#ccc' }]}
+              />
+            ))}
+          </View>
         </TouchableOpacity>
-      )}
-    />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginVertical: 8,
+    width: '100%',
+    maxWidth: 180,
     borderRadius: 10,
+    padding: 12,
+    elevation: 3,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    backgroundColor: '#fff',
   },
   title: {
     fontWeight: 'bold',
@@ -40,6 +51,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   content: {
+    fontSize: 14,
     color: '#555',
+    marginBottom: 8,
+  },
+  categories: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  catDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });

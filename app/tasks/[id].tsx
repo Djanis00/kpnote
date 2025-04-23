@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function EditTask() {
   const { id } = useLocalSearchParams();
@@ -55,39 +54,45 @@ export default function EditTask() {
     setTask({ ...task, subtasks: updated });
   };
 
-  const handleAddSubtask = () => {
-    setTask({
-      ...task,
-      subtasks: [...task.subtasks, { description: '', completed: false }],
-    });
+  const addSubtask = () => {
+    const updated = [...task.subtasks, { description: '', completed: false }];
+    setTask({ ...task, subtasks: updated });
   };
 
-  const handleSave = async () => {
-    const res = await fetch(`https://keep.kevindupas.com/api/tasks/${id}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        description: task.description,
-        completed: task.completed,
-        note_id: task.note_id,
-        subtasks: task.subtasks,
-      }),
-    });
+  const removeSubtask = (index) => {
+    const updated = task.subtasks.filter((_, i) => i !== index);
+    setTask({ ...task, subtasks: updated });
+  };
 
-    if (res.ok) {
-      Alert.alert('Tâche mise à jour');
-      router.replace('/tasks');
-    } else {
-      Alert.alert('Erreur', 'Échec de la mise à jour');
+  const saveTask = async () => {
+    try {
+      const res = await fetch(`https://keep.kevindupas.com/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: task.description,
+          note_id: task.note?.id || null,
+          subtasks: task.subtasks,
+        }),
+      });
+
+      if (res.ok) {
+        Alert.alert('Succès', 'Tâche mise à jour');
+        router.replace('/tasks');
+      } else {
+        Alert.alert('Erreur', 'Échec de la mise à jour');
+      }
+    } catch {
+      Alert.alert('Erreur', 'Connexion impossible');
     }
   };
 
-  const handleDelete = async () => {
-    Alert.alert('Supprimer ?', 'Cette action est irréversible', [
-      { text: 'Annuler' },
+  const deleteTask = () => {
+    Alert.alert('Supprimer ?', 'Confirmer la suppression ?', [
+      { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
         style: 'destructive',
@@ -102,105 +107,128 @@ export default function EditTask() {
     ]);
   };
 
-  if (loading || !task) return <Text style={{ padding: 20 }}>Chargement...</Text>;
+  if (loading || !task) {
+    return (
+      <View style={styles.centered}>
+        <Text>Chargement...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 16 }}>
-        <Ionicons name="arrow-back" size={24} color="black" />
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backText}>⬅️ Retour</Text>
       </TouchableOpacity>
 
-      <Text style={styles.label}>Tâche principale</Text>
+      <Text style={styles.title}>Modifier tâche</Text>
+
       <TextInput
+        style={styles.input}
         value={task.description}
         onChangeText={(text) => setTask({ ...task, description: text })}
-        style={styles.input}
+        placeholder="Description"
       />
 
-      <View style={styles.switchRow}>
-        <Text>Tâche complétée :</Text>
-        <Switch
-          value={task.completed}
-          onValueChange={(value) => setTask({ ...task, completed: value })}
-        />
-      </View>
-
-      <Text style={styles.label}>Sous-tâches</Text>
-      {task.subtasks.map((sub, i) => (
-        <View key={i} style={styles.subtaskRow}>
+      <Text style={styles.section}>Sous-tâches</Text>
+      {task.subtasks.map((sub, index) => (
+        <View key={index} style={styles.subtaskRow}>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            value={sub.description}
+            onChangeText={(txt) => handleSubtaskChange(txt, index)}
+            placeholder={`Sous-tâche ${index + 1}`}
+          />
           <Switch
             value={sub.completed}
-            onValueChange={() => handleToggleSubtask(i)}
+            onValueChange={() => handleToggleSubtask(index)}
           />
-          <TextInput
-            value={sub.description}
-            onChangeText={(text) => handleSubtaskChange(text, i)}
-            style={styles.subtaskInput}
-          />
+          <TouchableOpacity onPress={() => removeSubtask(index)}>
+            <Text style={{ color: 'red', marginLeft: 8 }}>🗑️</Text>
+          </TouchableOpacity>
         </View>
       ))}
-      <Button title="Ajouter une sous-tâche" onPress={handleAddSubtask} />
+      <Button title="Ajouter une sous-tâche" onPress={addSubtask} />
 
-      <Text style={styles.label}>Associer à une note (optionnel)</Text>
-      <ScrollView horizontal>
-        {notes.map((n) => (
-          <TouchableOpacity
-            key={n.id}
-            style={[
-              styles.noteButton,
-              task.note_id === n.id && { backgroundColor: '#ccc' },
-            ]}
-            onPress={() =>
-              setTask({ ...task, note_id: task.note_id === n.id ? null : n.id })
-            }
-          >
-            <Text>{n.title}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <Text style={styles.section}>Associer une note</Text>
+      {notes.map((note) => (
+        <TouchableOpacity
+          key={note.id}
+          onPress={() =>
+            setTask({
+              ...task,
+              note: task.note?.id === note.id ? null : note,
+            })
+          }
+          style={[
+            styles.note,
+            {
+              backgroundColor: task.note?.id === note.id ? '#cce5ff' : '#eee',
+            },
+          ]}
+        >
+          <Text>{note.title}</Text>
+        </TouchableOpacity>
+      ))}
 
-      <Button title="Enregistrer" onPress={handleSave} />
-      <Button title="Supprimer" onPress={handleDelete} color="red" />
+      <View style={styles.actions}>
+        <Button title="Sauvegarder" onPress={saveTask} color="#4CAF50" />
+        <View style={{ height: 10 }} />
+        <Button title="Supprimer" onPress={deleteTask} color="crimson" />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+  container: {
+    padding: 20,
+    backgroundColor: '#f4f5f7',
+    flexGrow: 1,
   },
-  label: {
-    fontWeight: 'bold',
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#2196F3',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  section: {
+    fontSize: 18,
+    fontWeight: '600',
     marginVertical: 12,
   },
-  noteButton: {
-    padding: 10,
-    backgroundColor: '#eee',
-    borderRadius: 6,
-    marginRight: 8,
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 10,
+    backgroundColor: '#fff',
   },
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    gap: 8,
   },
-  subtaskInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    flex: 1,
-    marginLeft: 8,
-    padding: 8,
+  note: {
+    padding: 12,
     borderRadius: 6,
+    marginVertical: 4,
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
+  actions: {
+    marginTop: 20,
   },
 });

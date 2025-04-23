@@ -3,14 +3,14 @@ import {
   View,
   Text,
   ActivityIndicator,
-  FlatList,
-  Button,
   StyleSheet,
+  Button,
   Alert,
-  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, Link } from 'expo-router';
+import TaskList from '../../components/tasks/TaskList';
 
 export default function TasksScreen() {
   const { token } = useAuth();
@@ -37,59 +37,50 @@ export default function TasksScreen() {
     fetchTasks();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.task}
-      onPress={() => router.push(`/tasks/${item.id}`)}
-    >
-      <Text style={[styles.title, item.completed && { textDecorationLine: 'line-through' }]}>
-        {item.description}
-      </Text>
-      <Text style={{ fontSize: 12 }}>
-        {item.completed ? 'Terminée' : 'En cours'}
-      </Text>
-    </TouchableOpacity>
-  );
-
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.heading}>Mes Tâches</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.heading}>Mes Tâches</Text>
+
+      <View style={styles.actions}>
+        <Button title="🔄 Rafraîchir" onPress={fetchTasks} />
         <Link href="/tasks/create" asChild>
-          <Button title="Ajouter" />
+          <Button title="➕ Ajouter une tâche" />
         </Link>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2196F3" />
       ) : tasks.length === 0 ? (
-        <Text>Aucune tâche pour le moment.</Text>
+        <Text style={styles.empty}>Aucune tâche disponible.</Text>
       ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-        />
+        <TaskList tasks={tasks} onSelect={(task) => router.push(`/tasks/${task.id}`)} />
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  heading: { fontSize: 20, fontWeight: 'bold' },
-  header: {
+  container: {
+    padding: 20,
+    flexGrow: 1,
+    backgroundColor: '#f4f5f7',
+  },
+  heading: {
+    fontSize: 26,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
   },
-  task: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    marginVertical: 6,
+  empty: {
+    fontSize: 16,
+    color: '#777',
+    marginTop: 40,
+    textAlign: 'center',
   },
-  title: { fontSize: 16 },
 });

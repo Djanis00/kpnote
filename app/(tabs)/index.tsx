@@ -51,16 +51,16 @@ export default function NotesScreen() {
       <Text style={styles.title}>Mes Notes</Text>
 
       <View style={styles.buttons}>
-        <Button title="Rafraîchir" onPress={fetchNotes} color="#607D8B" />
+        <Button title="🔄 Rafraîchir" onPress={fetchNotes} />
         <Link href="/notes/create" asChild>
-          <Button title="Nouvelle Note" color="#2196F3" />
+          <Button title="➕ Nouvelle note" />
         </Link>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#2196F3" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color="#2196F3" />
       ) : notes.length === 0 ? (
-        <Text style={styles.empty}>Aucune note disponible</Text>
+        <Text style={styles.empty}>Aucune note à afficher.</Text>
       ) : (
         <NoteList
           notes={notes}
@@ -74,12 +74,11 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#f3f4f6',
     flexGrow: 1,
-    alignItems: 'center',
+    backgroundColor: '#f4f5f7',
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     marginBottom: 20,
     textAlign: 'center',
@@ -87,14 +86,13 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
-    marginBottom: 24,
-    width: '100%',
-    maxWidth: 400,
+    gap: 10,
+    marginBottom: 16,
   },
   empty: {
-    marginTop: 40,
+    textAlign: 'center',
     fontSize: 16,
-    color: '#666',
+    color: '#555',
+    marginTop: 40,
   },
 });

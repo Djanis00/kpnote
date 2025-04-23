@@ -29,11 +29,13 @@ export default function LoginScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json', // important pour Laravel
         },
         body: JSON.stringify({ email, password }),
       });
 
       const result = await res.json();
+      console.log('📥 Résultat API :', result);
 
       if (res.ok && result.access_token) {
         await login(result.access_token);
@@ -42,6 +44,7 @@ export default function LoginScreen() {
         Alert.alert('Erreur', result.message || 'Connexion échouée');
       }
     } catch (err) {
+      console.error('❌ Erreur réseau :', err);
       Alert.alert('Erreur', 'Impossible de se connecter');
     }
   };
@@ -62,7 +65,6 @@ export default function LoginScreen() {
           autoCapitalize="none"
           style={styles.input}
         />
-
         <TextInput
           placeholder="Mot de passe"
           value={password}
@@ -71,9 +73,7 @@ export default function LoginScreen() {
           style={styles.input}
         />
 
-        <View style={styles.button}>
-          <Button title="Se connecter" onPress={handleLogin} color="#2196F3" />
-        </View>
+        <Button title="Se connecter" onPress={handleLogin} color="#2196F3" />
       </View>
     </KeyboardAvoidingView>
   );
@@ -82,34 +82,31 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
     justifyContent: 'center',
     padding: 24,
+    backgroundColor: '#f4f5f7',
   },
   box: {
     backgroundColor: '#fff',
     padding: 24,
-    borderRadius: 16,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 24,
+    marginBottom: 20,
     textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#ccc',
     borderRadius: 10,
     padding: 12,
-    backgroundColor: '#fff',
     marginBottom: 16,
-  },
-  button: {
-    marginTop: 12,
+    backgroundColor: '#fff',
   },
 });

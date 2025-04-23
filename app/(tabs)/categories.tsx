@@ -4,10 +4,10 @@ import {
   Text,
   TextInput,
   Button,
-  FlatList,
   StyleSheet,
   Alert,
   TouchableOpacity,
+  FlatList,
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,30 +49,39 @@ export default function CategoriesScreen() {
         body: JSON.stringify(payload),
       });
 
-      const responseJson = await res.json();
+      const json = await res.json();
+
       if (res.ok) {
         setName('');
         setColor('#FF5733');
         fetchCategories();
-        Alert.alert('Succès', 'Catégorie ajoutée');
       } else {
-        Alert.alert('Erreur', responseJson.message || 'Erreur serveur');
+        Alert.alert('Erreur', json.message || 'Échec de création');
       }
-    } catch (err) {
-      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+    } catch {
+      Alert.alert('Erreur', 'Connexion impossible');
     }
   };
 
   const deleteCategory = async (id: number) => {
-    try {
-      await fetch(`https://keep.kevindupas.com/api/categories/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      fetchCategories();
-    } catch {
-      Alert.alert('Erreur', 'Impossible de supprimer la catégorie');
-    }
+    Alert.alert('Supprimer ?', 'Confirmer la suppression ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await fetch(`https://keep.kevindupas.com/api/categories/${id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchCategories();
+          } catch {
+            Alert.alert('Erreur', 'Suppression échouée');
+          }
+        },
+      },
+    ]);
   };
 
   useEffect(() => {
@@ -84,19 +93,13 @@ export default function CategoriesScreen() {
       <Text style={styles.title}>Nouvelle catégorie</Text>
 
       <TextInput
-        placeholder="Nom de la catégorie"
+        placeholder="Nom"
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
-      <TextInput
-        placeholder="Couleur (#hex)"
-        value={color}
-        onChangeText={setColor}
-        style={styles.input}
-      />
 
-      <Text style={styles.label}>Couleurs prédéfinies :</Text>
+      <Text style={styles.label}>Choisir une couleur :</Text>
       <View style={styles.palette}>
         {predefinedColors.map((c) => (
           <TouchableOpacity
@@ -106,7 +109,7 @@ export default function CategoriesScreen() {
               {
                 backgroundColor: c,
                 borderWidth: c === color ? 3 : 1,
-                borderColor: c === color ? '#000' : '#ccc',
+                borderColor: c === color ? '#000' : '#999',
               },
             ]}
             onPress={() => setColor(c)}
@@ -114,62 +117,59 @@ export default function CategoriesScreen() {
         ))}
       </View>
 
-      <View style={styles.colorRow}>
+      <View style={styles.previewRow}>
         <Text style={styles.label}>Aperçu :</Text>
         <View style={[styles.colorDot, { backgroundColor: color }]} />
       </View>
 
-      <View style={styles.button}>
-        <Button title="Ajouter la catégorie" onPress={addCategory} color="#2196F3" />
+      <View style={{ marginBottom: 24 }}>
+        <Button title="Ajouter la catégorie" onPress={addCategory} />
       </View>
 
       <Text style={styles.title}>Catégories existantes</Text>
-
-      {categories.map((item) => (
-        <View key={item.id} style={styles.item}>
-          <View style={[styles.colorDot, { backgroundColor: item.color || '#eee' }]} />
-          <Text style={styles.catName}>{item.name}</Text>
-          <Button title="Supprimer" color="crimson" onPress={() => deleteCategory(item.id)} />
-        </View>
-      ))}
+      <FlatList
+        data={categories}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.item}>
+            <View style={[styles.colorDot, { backgroundColor: item.color || '#eee' }]} />
+            <Text style={styles.catName}>{item.name}</Text>
+            <Button title="Supprimer" color="crimson" onPress={() => deleteCategory(item.id)} />
+          </View>
+        )}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingBottom: 60,
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    padding: 16,
+    backgroundColor: '#f4f5f7',
+    flexGrow: 1,
   },
   title: {
     fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    marginBottom: 12,
+    fontWeight: '700',
+    marginBottom: 20,
   },
   label: {
-    alignSelf: 'flex-start',
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#aaa',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+    marginBottom: 16,
   },
   palette: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 16,
-    justifyContent: 'center',
+    marginBottom: 20,
   },
   colorPreview: {
     width: 30,
@@ -181,34 +181,25 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     marginLeft: 8,
-    borderWidth: 1,
-    borderColor: '#999',
   },
-  colorRow: {
+  previewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  button: {
-    width: '100%',
-    maxWidth: 400,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   item: {
-    width: '100%',
-    maxWidth: 400,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 12,
-    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
-    marginBottom: 10,
+    borderRadius: 8,
+    marginVertical: 6,
+    backgroundColor: '#fff',
+    gap: 10,
   },
   catName: {
     flex: 1,
     fontSize: 16,
-    marginLeft: 10,
   },
 });
