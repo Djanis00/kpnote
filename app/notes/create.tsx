@@ -30,7 +30,7 @@ export default function CreateNote() {
       const data = await res.json();
       setCategories(data);
     } catch (err) {
-      console.error('❌ Erreur de chargement des catégories :', err);
+      console.error(' Erreur de chargement des catégories :', err);
       Alert.alert('Erreur', 'Impossible de charger les catégories');
     }
   };
@@ -48,7 +48,7 @@ export default function CreateNote() {
     }
 
     const payload = { title, content, category_ids: selected };
-    console.log('📤 Envoi POST /notes avec :', payload);
+    console.log(' Envoi POST /notes avec :', payload);
 
     try {
       setLoading(true);
@@ -62,7 +62,7 @@ export default function CreateNote() {
       });
 
       const json = await res.json();
-      console.log('📥 Réponse API:', json);
+      console.log(' Réponse API:', json);
 
       if (res.ok) {
         Alert.alert('Succès', 'Note enregistrée');
@@ -71,7 +71,7 @@ export default function CreateNote() {
         Alert.alert('Erreur', json.message || 'Erreur de création');
       }
     } catch (err) {
-      console.error('❌ Erreur réseau :', err);
+      console.error(' Erreur réseau :', err);
       Alert.alert('Erreur', 'Impossible de se connecter');
     } finally {
       setLoading(false);

@@ -7,7 +7,7 @@ import { useState } from 'react';
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const router = useRouter();
-  const colorScheme = useColorScheme(); // "light" ou "dark"
+  const colorScheme = useColorScheme(); 
   const [isDark, setIsDark] = useState(colorScheme === 'dark');
 
   const handleLogout = async () => {
